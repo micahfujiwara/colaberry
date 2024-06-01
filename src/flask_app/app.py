@@ -1,23 +1,18 @@
 from flask import Flask, render_template
 import polars as pl
-import sqlite3
+import pathlib
+
+__PROJECT_DIR__: pathlib.Path = pathlib.Path(__file__).parent.parent.parent
+DATABASE_FILE: pathlib.Path = __PROJECT_DIR__ / 'database.db'
 
 
 app = Flask(__name__)
 
 
-def get_db_connection():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    posts = conn.execute('SELECT * FROM Date_Dim').fetchall()
-    conn.close()
-    return posts
+    df = pl.read_database(query = 'SELECT * FROM Weather', connection = f'sqlite:///{DATABASE_FILE}')
+    return df
 
 posts = index()
 

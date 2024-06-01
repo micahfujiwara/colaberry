@@ -1,12 +1,10 @@
 import polars as pl
 import pathlib
+import sqlite3
+from app import __PROJECT_DIR__, DATABASE_FILE
 
-
-__PROJECT_DIR__: pathlib.Path = pathlib.Path(__file__).parent.parent.parent
 WX_DATA: pathlib.Path = __PROJECT_DIR__ / 'wx_data'
 YLD_DATA: pathlib.Path = __PROJECT_DIR__ / 'yld_data' / 'US_corn_grain_yield.txt'
-
-
 
 def wx_consolidation_cleanse(df: pl.DataFrame, weather_station_id:str) -> pl.DataFrame:
     df = df.with_columns(weather_station_id = pl.lit(weather_station_id).cast(pl.String),
@@ -41,7 +39,6 @@ def wx_consolidation(folderpath:str) -> pl.DataFrame:
     return pl.concat(df)
 
 
-
 def yld_consolidation_cleanse(df: pl.DataFrame) -> pl.DataFrame:
     df = df.with_columns(year = pl.col('year').cast(pl.Int32),
                          yield_amt = pl.col('yield_amount').cast(pl.Int32))
@@ -55,11 +52,17 @@ def yld_consolidation(file:str) -> pl.DataFrame:
     print(df)
     
     
-
-# print(wx_df.null_count())
 wx_df = wx_consolidation(WX_DATA)
 yld_df = yld_consolidation(YLD_DATA)
 
 
 def push_data(wx_df: pl.DataFrame | None = None, yld_df: pl.DataFrame | None = None) -> pl.DataFrame:
-    
+    try:
+        if wx_df is not None:
+            wx_df.write_database("Weather", connection = f'sqlite:///{DATABASE_FILE}', if_exists = 'replace')
+        if yld_df is not None:
+            yld_df.write_database("Yield_Data", connection = f'sqlite:///{DATABASE_FILE}', if_exists = 'replace')
+    except Exception as e:
+        print(f"Error: {e}")
+        
+push_data(wx_df)
